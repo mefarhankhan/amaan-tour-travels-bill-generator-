@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amaan Tour and Travels - Bill Generator</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="container">
+    <header class="app-header">
+      <div>
+        <h1>AMAAN TOUR AND TRAVELS</h1>
+        <p>Bill Generator</p>
+      </div>
+      <div class="fixed-note">GST / Non-GST</div>
+    </header>
+
+    <form id="billForm">
+      <section class="card">
+        <h2>Bill Type & Invoice</h2>
+        <div class="grid three">
+          <label>
+            Bill Type
+            <select id="bill_type" name="bill_type">
+              <option value="non_gst">Non-GST Bill</option>
+              <option value="gst">GST Bill</option>
+            </select>
+          </label>
+
+          <label>
+            Invoice No.
+            <input name="invoice_no" required placeholder="ATT/27/03">
+          </label>
+
+          <label>
+            Issue Date
+            <input type="date" name="issue_date" required>
+          </label>
+
+          <label>
+            Car No.
+            <input name="car_no" placeholder="BR45P2525">
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Bill To</h2>
+        <div class="grid two">
+          <label>
+            Customer Name
+            <input name="bill_to_name" required placeholder="Sajid Ali Ansari">
+          </label>
+
+          <label>
+            Customer Address
+            <textarea name="bill_to_address" rows="2" placeholder="Deoria, UP"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>Journey / Service Details</h2>
+          <button type="button" class="secondary" id="addRow">+ Add Journey</button>
+        </div>
+
+        <div id="rows"></div>
+      </section>
+
+      <section class="card summary-card">
+        <div>
+          <strong>Grand Total</strong>
+          <span id="grandTotal">₹0.00</span>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button type="button" class="secondary" id="resetBtn">Reset</button>
+        <button type="button" class="secondary" id="previewBtn">Preview PDF</button>
+        <button type="submit" class="primary">Generate & Download PDF</button>
+      </div>
+
+      <p id="status" class="status"></p>
+    </form>
+  </main>
+
+  <div id="previewModal" class="preview-modal" aria-hidden="true">
+    <div class="preview-container">
+      <button type="button" class="close-preview" id="closePreview" aria-label="Close PDF preview">✕</button>
+      <iframe id="pdfPreview" title="Actual A4 PDF Preview"></iframe>
+    </div>
+  </div>
+    </form>
+  </main>
+
+  <template id="rowTemplate">
+    <div class="journey-row">
+      <div class="row-grid">
+        <label>
+          Date
+          <input class="item-date" type="date">
+        </label>
+
+        <label class="wide">
+          From / To
+          <input class="item-route" placeholder="Hotel Urvashi to NTPC (BRBCL) Nabinagar">
+        </label>
+
+        <label>
+          Service
+          <input class="item-service" placeholder="Official">
+        </label>
+
+        <label>
+          Vehicle No.
+          <input class="item-vehicle" placeholder="BR24Z9691">
+        </label>
+
+        <label>
+          KMs Run
+          <input class="item-km" type="number" min="0" step="0.01" placeholder="2400">
+        </label>
+
+        <label>
+          Rate
+          <input class="item-rate" type="number" min="0" step="0.01" placeholder="2400">
+        </label>
+
+        <label>
+          Amount
+          <input class="item-amount" type="number" min="0" step="0.01" placeholder="2400">
+        </label>
+
+        <button type="button" class="remove-row">Remove</button>
+      </div>
+    </div>
+  </template>
+
+  <script src="/script.js"></script>
+</body>
+</html>
