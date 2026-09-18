@@ -19,6 +19,11 @@ QR_PATH = BASE_DIR / "assets" / "upi-qr.png"
 FIXED = {
     "company_name": "AMAAN TOUR AND TRAVELS",
 
+    "address_line1": "Pali road,Dehri-on-Sone",
+    "address_line2": "Rohtas, Bihar, 821307",
+    "email": "Talibamankhan@gmail.com",
+    "phone": "9931421738,7761948730",
+
     "bank_name": "STATE BANK OF INDIA",
     "bank_account": "30938200536",
     "bank_ifsc": "SBIN0000060",
@@ -238,6 +243,15 @@ def draw_right(
     )
 
 
+def draw_right_at(c, text, right_x, y, font="Helvetica", size=10):
+    """Draw text right-aligned so it ends exactly at right_x."""
+
+    text = str(text or "")
+    c.setFont(font, size)
+    text_width = c.stringWidth(text, font, size)
+    c.drawString(right_x - text_width, y, text)
+
+
 # =========================================================
 # PDF GENERATOR
 # =========================================================
@@ -247,586 +261,272 @@ def generate_bill_pdf(data, output_dir):
     validate(data)
 
     output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    output_dir.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-    invoice_no = clean_filename(
-        data.get("invoice_no")
-    )
-
-    output_path = (
-        output_dir /
-        f"{invoice_no}.pdf"
-    )
-
-    # =====================================================
-    # CREATE A4 PDF
-    # =====================================================
-
-    c = canvas.Canvas(
-        str(output_path),
-        pagesize=A4
-    )
-
-    c.setTitle(
-        f"Amaan Tour and Travels - {invoice_no}"
-    )
-
-    c.setAuthor(
-        FIXED["company_name"]
-    )
-
-    # =====================================================
-    # OUTER BORDER
-    # =====================================================
-
-    outer_x = 12 * mm
-    outer_y = 15 * mm
-
-    outer_w = PAGE_W - 24 * mm
-    outer_h = PAGE_H - 30 * mm
-
-    c.setLineWidth(1.0)
-
-    c.rect(
-        outer_x,
-        outer_y,
-        outer_w,
-        outer_h
-    )
-
-    # =====================================================
-    # INNER BILL BOX
-    # =====================================================
-
-    inner_x = 25 * mm
-    inner_y = 42 * mm
-
-    inner_w = PAGE_W - 50 * mm
-    inner_h = 190 * mm
-
-    c.setLineWidth(0.9)
-
-    c.rect(
-        inner_x,
-        inner_y,
-        inner_w,
-        inner_h
-    )
-
-    # =====================================================
-    # CAR NUMBER
-    # =====================================================
+    invoice_no = clean_filename(data.get("invoice_no"))
+    output_path = output_dir / f"{invoice_no}.pdf"
 
     items = data.get("items") or []
-
     first_item = items[0] if items else {}
 
-    car_no = (
-        data.get("car_no")
-        or first_item.get("vehicle_no")
-        or ""
-    )
-
-    c.setFont(
-        "Helvetica-Bold",
-        12
-    )
-
-    c.drawString(
-        inner_x + 5 * mm,
-        inner_y + inner_h - 11 * mm,
-        f"Car no-[{car_no}]"
-    )
+    c = canvas.Canvas(str(output_path), pagesize=A4)
+    c.setTitle(f"Amaan Tour and Travels - {invoice_no}")
+    c.setAuthor(FIXED["company_name"])
 
     # =====================================================
-    # TABLE POSITION
+    # OUTER BORDER (whole bill lives inside this single box)
     # =====================================================
 
-    table_x = inner_x
+    box_x = 12 * mm
+    box_y = 15 * mm
+    box_w = PAGE_W - 24 * mm
+    box_h = PAGE_H - 30 * mm
 
-    table_top = (
-        inner_y +
-        inner_h -
-        18 * mm
-    )
+    c.setLineWidth(1.1)
+    c.rect(box_x, box_y, box_w, box_h)
+
+    left_x = box_x + 5 * mm
+    right_x = box_x + box_w - 5 * mm
 
     # =====================================================
-    # COLUMN WIDTHS
+    # TITLE
     # =====================================================
 
-    date_w = 34 * mm
-    service_w = 28 * mm
-    description_w = 70 * mm
+    cursor_y = box_y + box_h - 16 * mm
 
-    amount_w = (
-        inner_w -
-        date_w -
-        service_w -
-        description_w
-    )
+    c.setFont("Helvetica-Bold", 30)
+    c.drawCentredString(box_x + box_w / 2, cursor_y, FIXED["company_name"])
+
+    # =====================================================
+    # COMPANY ADDRESS BLOCK (right aligned, under the title)
+    # =====================================================
+
+    cursor_y -= 10 * mm
+
+    address_lines = [
+        FIXED["address_line1"],
+        FIXED["address_line2"],
+        f"E-mail:-{FIXED['email']}",
+        f"Contact no:- {FIXED['phone']}",
+    ]
+
+    for line in address_lines:
+        draw_right_at(c, line, right_x, cursor_y, "Helvetica", 10)
+        cursor_y -= 5 * mm
+
+    # Separator under the header block
+    cursor_y -= 3 * mm
+    c.setLineWidth(0.8)
+    c.line(box_x, cursor_y, box_x + box_w, cursor_y)
+
+    # =====================================================
+    # INVOICE INFO (left)  /  BILL TO (right)
+    # =====================================================
+
+    cursor_y -= 8 * mm
+
+    invoice_no_display = data.get("invoice_no") or ""
+    issue_date_display = format_date(data.get("issue_date"))
+
+    bill_to_name = data.get("bill_to_name") or ""
+    bill_to_address = data.get("bill_to_address") or ""
+    address_parts = [ln.strip() for ln in str(bill_to_address).splitlines() if ln.strip()]
+
+    c.setFont("Helvetica", 10)
+    c.drawString(left_x, cursor_y, f"Invoice no:-{invoice_no_display}")
+    draw_right_at(c, "Bill to", right_x, cursor_y, "Helvetica", 10)
+
+    cursor_y -= 6 * mm
+    c.drawString(left_x, cursor_y, f"Issue date:- {issue_date_display}")
+    draw_right_at(c, bill_to_name, right_x, cursor_y, "Helvetica", 10)
+
+    for part in address_parts:
+        cursor_y -= 5.5 * mm
+        draw_right_at(c, part, right_x, cursor_y, "Helvetica", 10)
+
+    # Space to match the reference layout, then a route line
+    cursor_y -= 26 * mm
+    c.setLineWidth(0.8)
+    c.line(box_x, cursor_y + 5 * mm, box_x + box_w, cursor_y + 5 * mm)
+
+    route = first_item.get("route") or first_item.get("description") or ""
+    c.setFont("Helvetica", 11)
+    c.drawString(left_x, cursor_y, f"From-{route}")
+
+    cursor_y -= 3 * mm
+    c.setLineWidth(0.8)
+    c.line(box_x, cursor_y, box_x + box_w, cursor_y)
+
+    # =====================================================
+    # TABLE
+    # =====================================================
+
+    table_x = box_x
+    table_top = cursor_y
+    inner_w = box_w
+
+    date_w = 32 * mm
+    service_w = 34 * mm
+    km_w = 32 * mm
+    rate_w = 34 * mm
+    amount_w = inner_w - date_w - service_w - km_w - rate_w
 
     x1 = table_x
     x2 = x1 + date_w
     x3 = x2 + service_w
-    x4 = x3 + description_w
-    x5 = x4 + amount_w
+    x4 = x3 + km_w
+    x5 = x4 + rate_w
 
-    # =====================================================
-    # HEADER
-    # =====================================================
-
-    header_h = 13 * mm
-
-    header_bottom = (
-        table_top -
-        header_h
-    )
+    header_h = 12 * mm
+    header_bottom = table_top - header_h
 
     c.setLineWidth(0.8)
+    c.rect(table_x, header_bottom, inner_w, header_h)
 
-    # Header outer box
-    c.rect(
-        table_x,
-        header_bottom,
-        inner_w,
-        header_h
-    )
+    for x in (x2, x3, x4, x5):
+        c.line(x, table_top, x, header_bottom)
 
-    # Vertical lines
-    c.line(
-        x2,
-        table_top,
-        x2,
-        header_bottom
-    )
+    header_y = header_bottom + 4.2 * mm
 
-    c.line(
-        x3,
-        table_top,
-        x3,
-        header_bottom
-    )
+    draw_center(c, "Date of journey", x1, header_y, date_w, "Helvetica-Bold", 9)
+    draw_center(c, "Service", x2, header_y, service_w, "Helvetica-Bold", 9)
+    draw_center(c, "KMs Run", x3, header_y, km_w, "Helvetica-Bold", 9)
+    draw_center(c, "Rate", x4, header_y, rate_w, "Helvetica-Bold", 9)
+    draw_center(c, "Amount", x5, header_y, amount_w, "Helvetica-Bold", 9)
 
-    c.line(
-        x4,
-        table_top,
-        x4,
-        header_bottom
-    )
-
-    # Header text
-    header_y = (
-        header_bottom +
-        4.2 * mm
-    )
-
-    draw_center(
-        c,
-        "Date of journey",
-        x1,
-        header_y,
-        date_w,
-        "Helvetica-Bold",
-        9
-    )
-
-    draw_center(
-        c,
-        "Service",
-        x2,
-        header_y,
-        service_w,
-        "Helvetica-Bold",
-        9
-    )
-
-    draw_center(
-        c,
-        "Description",
-        x3,
-        header_y,
-        description_w,
-        "Helvetica-Bold",
-        9
-    )
-
-    draw_center(
-        c,
-        "Amount",
-        x4,
-        header_y,
-        amount_w,
-        "Helvetica-Bold",
-        9
-    )
-
-    # =====================================================
-    # JOURNEY ROWS
-    # =====================================================
-
-    row_h = 13 * mm
-
+    row_h = 16 * mm
     current_y = header_bottom
-
     total = 0
+    max_rows = 6
 
-    # Maximum rows that fit in the reference bill area.
-    # Extra rows are kept from overflowing the invoice box.
-    max_rows = 8
+    for item in items[:max_rows]:
 
-    for index, item in enumerate(items[:max_rows]):
+        row_bottom = current_y - row_h
 
-        row_bottom = (
-            current_y -
-            row_h
-        )
+        c.rect(table_x, row_bottom, inner_w, row_h)
+        for x in (x2, x3, x4, x5):
+            c.line(x, current_y, x, row_bottom)
 
-        # Horizontal row box
-        c.rect(
-            table_x,
-            row_bottom,
-            inner_w,
-            row_h
-        )
-
-        # Vertical lines
-        c.line(
-            x2,
-            current_y,
-            x2,
-            row_bottom
-        )
-
-        c.line(
-            x3,
-            current_y,
-            x3,
-            row_bottom
-        )
-
-        c.line(
-            x4,
-            current_y,
-            x4,
-            row_bottom
-        )
-
-        # -------------------------------------------------
-        # DATE
-        # -------------------------------------------------
-
-        date_value = (
-            item.get("date")
-            or item.get("journey_date")
-            or ""
-        )
-
-        # If HTML date input was used
-        date_value = format_date(
-            date_value
-        )
-
-        # -------------------------------------------------
-        # SERVICE
-        # -------------------------------------------------
-
-        service_value = (
-            item.get("service")
-            or "Official"
-        )
-
-        # -------------------------------------------------
-        # DESCRIPTION
-        # -------------------------------------------------
-
-        description = (
-            item.get("description")
-            or item.get("route")
-            or ""
-        )
-
-        # -------------------------------------------------
-        # AMOUNT
-        # -------------------------------------------------
-
-        amount = item.get(
-            "amount",
-            0
-        )
+        date_value = format_date(item.get("date") or item.get("journey_date") or "")
+        service_value = item.get("service") or "Official"
+        vehicle_no = item.get("vehicle_no") or ""
+        km_value = item.get("km") or ""
+        rate_value = item.get("rate")
+        amount = item.get("amount", 0)
 
         try:
             total += float(amount or 0)
         except (TypeError, ValueError):
             pass
 
-        amount_text = money(
-            amount
-        )
+        rate_text = money(rate_value) if rate_value not in (None, "", 0, "0") else ""
+        amount_text = money(amount)
 
-        text_y = (
-            row_bottom +
-            4.2 * mm
-        )
+        mid_y = row_bottom + row_h / 2
 
-        draw_center(
-            c,
-            date_value,
-            x1,
-            text_y,
-            date_w,
-            "Helvetica",
-            9
-        )
+        draw_center(c, date_value, x1, mid_y - 1.5 * mm, date_w, "Helvetica", 9)
 
-        draw_center(
-            c,
-            service_value,
-            x2,
-            text_y,
-            service_w,
-            "Helvetica",
-            9
-        )
+        # Service name, with vehicle number in brackets below it
+        draw_center(c, service_value, x2, mid_y + 2.5 * mm, service_w, "Helvetica", 9)
+        if vehicle_no:
+            draw_center(c, f"[{vehicle_no}]", x2, mid_y - 4 * mm, service_w, "Helvetica", 8)
 
-        draw_left(
-            c,
-            description,
-            x3,
-            text_y,
-            description_w,
-            "Helvetica",
-            9
-        )
-
-        draw_right(
-            c,
-            amount_text,
-            x4,
-            text_y,
-            amount_w,
-            "Helvetica",
-            9
-        )
+        draw_center(c, km_value, x3, mid_y - 1.5 * mm, km_w, "Helvetica", 9)
+        draw_right(c, rate_text, x4, mid_y - 1.5 * mm, rate_w, "Helvetica", 9)
+        draw_right(c, amount_text, x5, mid_y - 1.5 * mm, amount_w, "Helvetica", 9)
 
         current_y = row_bottom
 
+    table_bottom = current_y
+
     # =====================================================
-    # TOTAL
+    # GRAND TOTAL
     # =====================================================
 
-    # If frontend already calculated/sent total,
-    # use it. Otherwise use journey sum.
     supplied_total = data.get("total")
-
-    if supplied_total not in (
-        None,
-        "",
-        0,
-        "0"
-    ):
+    if supplied_total not in (None, "", 0, "0"):
         try:
-            total = float(
-                supplied_total
-            )
+            total = float(supplied_total)
         except (TypeError, ValueError):
             pass
 
-    total_w = 72 * mm
-    total_h = 13 * mm
-
-    total_x = (
-        inner_x +
-        inner_w -
-        total_w -
-        4 * mm
-    )
-
-    total_y = (
-        inner_y +
-        47 * mm
-    )
+    total_w = 74 * mm
+    total_h = 12 * mm
+    total_x = box_x + box_w - total_w
+    total_y = table_bottom - 6 * mm - total_h
 
     c.setLineWidth(0.9)
+    c.rect(total_x, total_y, total_w, total_h)
 
-    c.rect(
-        total_x,
-        total_y,
-        total_w,
-        total_h
-    )
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(total_x + 3 * mm, total_y + 4.4 * mm, "GRAND TOTAL :-")
 
-    c.setFont(
-        "Helvetica-Bold",
-        10
-    )
-
-    c.drawString(
-        total_x + 3 * mm,
-        total_y + 4.7 * mm,
-        "Total Amount :-"
-    )
-
-    total_text = (
-        f"RS {money(total)}"
-    )
-
-    draw_right(
-        c,
-        total_text,
-        total_x + 35 * mm,
-        total_y + 4.7 * mm,
-        total_w - 37 * mm,
-        "Helvetica-Bold",
-        10
-    )
+    total_text = f"RS {money(total)}"
+    draw_right(c, total_text, total_x + 30 * mm, total_y + 4.4 * mm, total_w - 30 * mm, "Helvetica-Bold", 11)
 
     # =====================================================
-    # QR CODE
+    # QR CODE + UPI ID
     # =====================================================
 
-    qr_x = (
-        inner_x +
-        6 * mm
-    )
-
-    qr_y = (
-        inner_y +
-        8 * mm
-    )
-
-    qr_size = 31 * mm
+    qr_x = box_x + 6 * mm
+    qr_size = 30 * mm
+    qr_y = total_y - 14 * mm - qr_size
 
     if QR_PATH.exists():
-
         try:
-
             c.drawImage(
-                ImageReader(
-                    str(QR_PATH)
-                ),
+                ImageReader(str(QR_PATH)),
                 qr_x,
                 qr_y,
                 width=qr_size,
                 height=qr_size,
                 preserveAspectRatio=True,
-                mask="auto"
+                mask="auto",
             )
-
         except Exception:
             pass
 
-    # =====================================================
-    # BANK DETAILS
-    # =====================================================
-
-    bank_x = (
-        inner_x +
-        42 * mm
-    )
-
-    bank_y = (
-        inner_y +
-        36 * mm
-    )
-
-    c.setFont(
-        "Helvetica-Bold",
-        9
-    )
-
-    c.drawString(
-        bank_x,
-        bank_y,
-        f"BANK NAME:- {FIXED['bank_name']}"
-    )
-
-    c.drawString(
-        bank_x,
-        bank_y - 6 * mm,
-        f"BANK A/C :- {FIXED['bank_account']}"
-    )
-
-    c.drawString(
-        bank_x,
-        bank_y - 12 * mm,
-        f"BANK IFSC :- {FIXED['bank_ifsc']}"
-    )
-
-    c.drawString(
-        bank_x,
-        bank_y - 18 * mm,
-        f"Name :- {FIXED['account_name']}"
-    )
-
-    # =====================================================
-    # UPI ID
-    # =====================================================
-
     if FIXED.get("upi_id"):
-
-        c.setFont(
-            "Helvetica",
-            8
-        )
-
-        c.drawString(
-            qr_x,
-            qr_y - 4 * mm,
-            f"UPI: {FIXED['upi_id']}"
-        )
+        c.setFont("Helvetica", 8)
+        c.drawCentredString(qr_x + qr_size / 2, qr_y - 5 * mm, f"UPI ID: {FIXED['upi_id']}")
 
     # =====================================================
-    # AUTHORIZED SIGNATURE
+    # BANK DETAILS (below the QR code)
     # =====================================================
 
-    signature_x = (
-        inner_x +
-        inner_w -
-        58 * mm
-    )
+    bank_x = qr_x
+    bank_y = qr_y - 13 * mm
 
-    signature_y = (
-        inner_y +
-        19 * mm
-    )
-
-    c.setFont(
-        "Helvetica-Bold",
-        9
-    )
-
-    c.drawCentredString(
-        signature_x + 29 * mm,
-        signature_y,
-        FIXED["signature"]
-    )
+    c.setFont("Helvetica", 9)
+    c.drawString(bank_x, bank_y, f"BANK NAME:- {FIXED['bank_name']}")
+    c.drawString(bank_x, bank_y - 5 * mm, f"BANK A/C :- {FIXED['bank_account']}")
+    c.drawString(bank_x, bank_y - 10 * mm, f"BANK IFSC :- {FIXED['bank_ifsc']}")
+    c.drawString(bank_x, bank_y - 15 * mm, f"Name :- {FIXED['account_name']}")
 
     # =====================================================
-    # COMPANY NAME
+    # AUTHORIZED SIGNATURE (bottom right)
     # =====================================================
 
-    c.setFont(
-        "Helvetica-Bold",
-        11
-    )
+    sig_right_x = box_x + box_w - 6 * mm
+    sig_y = box_y + 12 * mm
 
-    c.drawCentredString(
-        inner_x +
-        inner_w / 2,
-        inner_y + 6 * mm,
-        FIXED["company_name"]
-    )
+    c.setFont("Helvetica-Oblique", 9)
+    text = FIXED["signature"]
+    w = c.stringWidth(text, "Helvetica-Oblique", 9)
+    c.drawString(sig_right_x - w, sig_y, text)
+    c.line(sig_right_x - w, sig_y - 1, sig_right_x, sig_y - 1)
+
+    sig_y -= 4.5 * mm
+    text2 = FIXED["company_name"]
+    w2 = c.stringWidth(text2, "Helvetica-Oblique", 9)
+    c.drawString(sig_right_x - w2, sig_y, text2)
+    c.line(sig_right_x - w2, sig_y - 1, sig_right_x, sig_y - 1)
 
     # =====================================================
     # FINISH
     # =====================================================
 
     c.showPage()
-
     c.save()
 
     return output_path

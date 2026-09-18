@@ -66,42 +66,6 @@ def generate_bill():
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         app.logger.exception("Bill generation failed")
-
-        @app.post("/api/preview-bill")
-def preview_bill():
-    data = request.get_json(silent=True)
-
-    if not data:
-        return jsonify({
-            "error": "Invalid or missing JSON data"
-        }), 400
-
-    try:
-        pdf_path = generate_bill_pdf(
-            data,
-            GENERATED_DIR
-        )
-
-        return send_file(
-            pdf_path,
-            as_attachment=False,
-            download_name=pdf_path.name,
-            mimetype="application/pdf",
-        )
-
-    except ValueError as exc:
-        return jsonify({
-            "error": str(exc)
-        }), 400
-
-    except Exception as exc:
-        app.logger.exception(
-            "Bill preview failed"
-        )
-
-        return jsonify({
-            "error": f"Bill preview failed: {exc}"
-        }), 500
         return jsonify({"error": f"Bill generation failed: {exc}"}), 500
 
 if __name__ == "__main__":
