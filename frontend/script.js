@@ -71,11 +71,29 @@ function collectData() {
     invoice_no: fd.get("invoice_no"),
     issue_date: fd.get("issue_date"),
     car_no: fd.get("car_no"),
+    gstin: fd.get("gstin"),
     bill_to_name: fd.get("bill_to_name"),
     bill_to_address: fd.get("bill_to_address"),
     items
   };
 }
+
+function toggleGstinField() {
+  const billType = document.getElementById("bill_type").value;
+  const gstinField = document.getElementById("gstinField");
+  const gstinInput = document.getElementById("gstin");
+
+  const isGst = billType === "gst";
+  gstinField.style.display = isGst ? "" : "none";
+  gstinInput.required = isGst;
+
+  if (!isGst) {
+    gstinInput.value = "";
+  }
+}
+
+document.getElementById("bill_type").addEventListener("change", toggleGstinField);
+toggleGstinField();
 
 async function previewBill() {
   if (!form.reportValidity()) {

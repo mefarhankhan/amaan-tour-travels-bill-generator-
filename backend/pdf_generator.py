@@ -314,6 +314,14 @@ def generate_bill_pdf(data, output_dir):
         draw_right_at(c, line, right_x, cursor_y, "Helvetica", 10)
         cursor_y -= 5 * mm
 
+    # GSTIN — only printed on GST bills, and only if it was supplied
+    is_gst_bill = str(data.get("bill_type") or "").strip().lower() == "gst"
+    gstin = str(data.get("gstin") or "").strip()
+
+    if is_gst_bill and gstin:
+        draw_right_at(c, f"GSTIN: {gstin}", right_x, cursor_y, "Helvetica-Bold", 10)
+        cursor_y -= 5 * mm
+
     # Separator under the header block
     cursor_y -= 3 * mm
     c.setLineWidth(0.8)
@@ -450,27 +458,36 @@ def generate_bill_pdf(data, output_dir):
         except (TypeError, ValueError):
             pass
 
-    total_w = 74 * mm
-    total_h = 12 * mm
+    total_w = 78 * mm
+    total_h = 14 * mm
     total_x = box_x + box_w - total_w
     total_y = table_bottom - 6 * mm - total_h
 
-    c.setLineWidth(0.9)
-    c.rect(total_x, total_y, total_w, total_h)
+    # Shaded fill so the Grand Total box stands out clearly
+    c.setFillColorRGB(0.90, 0.90, 0.90)
+    c.rect(total_x, total_y, total_w, total_h, stroke=0, fill=1)
+    c.setFillColorRGB(0, 0, 0)
 
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(total_x + 3 * mm, total_y + 4.4 * mm, "GRAND TOTAL :-")
+    c.setLineWidth(1.4)
+    c.rect(total_x, total_y, total_w, total_h, stroke=1, fill=0)
+
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(total_x + 4 * mm, total_y + 5 * mm, "GRAND TOTAL :-")
 
     total_text = f"RS {money(total)}"
-    draw_right(c, total_text, total_x + 30 * mm, total_y + 4.4 * mm, total_w - 30 * mm, "Helvetica-Bold", 11)
+    draw_right(c, total_text, total_x + 32 * mm, total_y + 5 * mm, total_w - 32 * mm, "Helvetica-Bold", 12)
 
     # =====================================================
     # QR CODE + UPI ID
     # =====================================================
 
+    # The QR asset already has "UPI ID: ..." printed into the image itself,
+    # so we draw the image only — no separate caption is added (that was
+    # causing the duplicated/misaligned UPI ID text).
     qr_x = box_x + 6 * mm
-    qr_size = 30 * mm
-    qr_y = total_y - 14 * mm - qr_size
+    qr_w = 32 * mm
+    qr_h = 36 * mm  # a little taller than wide: the asset has its caption baked in at the bottom
+    qr_y = total_y - 10 * mm - qr_h
 
     if QR_PATH.exists():
         try:
@@ -478,24 +495,21 @@ def generate_bill_pdf(data, output_dir):
                 ImageReader(str(QR_PATH)),
                 qr_x,
                 qr_y,
-                width=qr_size,
-                height=qr_size,
+                width=qr_w,
+                height=qr_h,
                 preserveAspectRatio=True,
+                anchor="n",
                 mask="auto",
             )
         except Exception:
             pass
-
-    if FIXED.get("upi_id"):
-        c.setFont("Helvetica", 8)
-        c.drawCentredString(qr_x + qr_size / 2, qr_y - 5 * mm, f"UPI ID: {FIXED['upi_id']}")
 
     # =====================================================
     # BANK DETAILS (below the QR code)
     # =====================================================
 
     bank_x = qr_x
-    bank_y = qr_y - 13 * mm
+    bank_y = qr_y - 8 * mm
 
     c.setFont("Helvetica", 9)
     c.drawString(bank_x, bank_y, f"BANK NAME:- {FIXED['bank_name']}")
