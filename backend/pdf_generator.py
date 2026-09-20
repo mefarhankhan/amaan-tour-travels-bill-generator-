@@ -464,7 +464,7 @@ def generate_bill_pdf(data, output_dir):
     bill_to_address = data.get("bill_to_address") or ""
     address_parts = [ln.strip() for ln in str(bill_to_address).splitlines() if ln.strip()]
 
-    # Fixed Bill To column. The text inset keeps it away from the black border.
+    # Fixed Bill To column. Every visible line ends at the same right margin.
     bill_to_col_w = 75 * mm
     bill_to_col_x = right_x - bill_to_col_w
     bill_to_text_x = bill_to_col_x + 6 * mm
@@ -477,7 +477,7 @@ def generate_bill_pdf(data, output_dir):
 
     c.setFont("Helvetica", 10)
     c.drawString(left_x, invoice_info_y, f"Invoice no:-{invoice_no_display}")
-    draw_center(c, "Bill to", bill_to_text_x, invoice_info_y, bill_to_text_w, "Helvetica", 10)
+    draw_right_at(c, "Bill to", right_x, invoice_info_y, "Helvetica", 10)
     c.drawString(left_x, invoice_info_y - 6 * mm, f"Issue date:- {issue_date_display}")
 
     bill_to_lines = []
@@ -493,7 +493,7 @@ def generate_bill_pdf(data, output_dir):
 
     bill_to_y = invoice_info_y - 6 * mm
     for line in bill_to_lines:
-        draw_center(c, line, bill_to_text_x, bill_to_y, bill_to_text_w, "Helvetica", 10)
+        draw_right_at(c, line, right_x, bill_to_y, "Helvetica", 10)
         bill_to_y -= bill_to_line_h
 
     # Fixed separator: the table always starts at the same vertical position.
