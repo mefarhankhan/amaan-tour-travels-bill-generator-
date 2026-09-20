@@ -477,7 +477,7 @@ def generate_bill_pdf(data, output_dir):
 
     c.setFont("Helvetica", 10)
     c.drawString(left_x, invoice_info_y, f"Invoice no:-{invoice_no_display}")
-    draw_center(c, "Bill to", bill_to_text_x +8 * mm, invoice_info_y, bill_to_text_w, "Helvetica", 10)
+    draw_center(c, "Bill to", bill_to_text_x +12 * mm, invoice_info_y, bill_to_text_w, "Helvetica", 10)
     c.drawString(left_x, invoice_info_y - 6 * mm, f"Issue date:- {issue_date_display}")
 
     bill_to_lines = []
