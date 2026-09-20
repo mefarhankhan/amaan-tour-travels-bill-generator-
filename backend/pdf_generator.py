@@ -464,61 +464,42 @@ def generate_bill_pdf(data, output_dir):
     bill_to_address = data.get("bill_to_address") or ""
     address_parts = [ln.strip() for ln in str(bill_to_address).splitlines() if ln.strip()]
 
-    # "Bill to" lives in its own centered column on the right. Its name and
-    # address are word-wrapped to fit that column instead of relying on the
-    # customer's own line breaks and shrinking one long line until it spills
-    # past the border.
-   # Fixed-size Bill To section: long addresses cannot move the table down.
-bill_to_col_w = 75 * mm
-bill_to_col_x = right_x - bill_to_col_w
+    # Fixed Bill To column. The text inset keeps it away from the black border.
+    bill_to_col_w = 75 * mm
+    bill_to_col_x = right_x - bill_to_col_w
+    bill_to_text_x = bill_to_col_x + 6 * mm
+    bill_to_text_w = bill_to_col_w - 12 * mm
 
-# Keeps the customer text away from the outer black border.
-bill_to_text_x = bill_to_col_x + 6 * mm
-bill_to_text_w = bill_to_col_w - 12 * mm
+    # This defines a fixed-height address area, independent of address length.
+    bill_to_block_h = 45 * mm
+    bill_to_line_h = 5.5 * mm
+    max_bill_to_lines = 6
 
-bill_to_block_h = 45 * mm
-bill_to_line_h = 5.5 * mm
-max_bill_to_lines = 6
+    c.setFont("Helvetica", 10)
+    c.drawString(left_x, invoice_info_y, f"Invoice no:-{invoice_no_display}")
+    draw_center(c, "Bill to", bill_to_text_x, invoice_info_y, bill_to_text_w, "Helvetica", 10)
+    c.drawString(left_x, invoice_info_y - 6 * mm, f"Issue date:- {issue_date_display}")
 
-c.setFont("Helvetica", 10)
-c.drawString(left_x, invoice_info_y, f"Invoice no:-{invoice_no_display}")
-draw_center(
-    c, "Bill to", bill_to_text_x, invoice_info_y,
-    bill_to_text_w, "Helvetica", 10
-)
+    bill_to_lines = []
+    if bill_to_name:
+        bill_to_lines.extend(wrap_text(c, bill_to_name, "Helvetica", 10, bill_to_text_w))
+    for address_part in address_parts:
+        bill_to_lines.extend(wrap_text(c, address_part, "Helvetica", 10, bill_to_text_w))
 
-c.drawString(left_x, invoice_info_y - 6 * mm, f"Issue date:- {issue_date_display}")
+    # Never allow a long address to make this section taller.
+    if len(bill_to_lines) > max_bill_to_lines:
+        bill_to_lines = bill_to_lines[:max_bill_to_lines]
+        bill_to_lines[-1] = "..."
 
-bill_to_lines = []
+    bill_to_y = invoice_info_y - 6 * mm
+    for line in bill_to_lines:
+        draw_center(c, line, bill_to_text_x, bill_to_y, bill_to_text_w, "Helvetica", 10)
+        bill_to_y -= bill_to_line_h
 
-if bill_to_name:
-    bill_to_lines.extend(
-        wrap_text(c, bill_to_name, "Helvetica", 10, bill_to_text_w)
-    )
-
-for part in address_parts:
-    bill_to_lines.extend(
-        wrap_text(c, part, "Helvetica", 10, bill_to_text_w)
-    )
-
-# Do not let a long address change the header/table position.
-if len(bill_to_lines) > max_bill_to_lines:
-    bill_to_lines = bill_to_lines[:max_bill_to_lines]
-    bill_to_lines[-1] = "..."
-
-bill_to_y = invoice_info_y - 6 * mm
-
-for line in bill_to_lines:
-    draw_center(
-        c, line, bill_to_text_x, bill_to_y,
-        bill_to_text_w, "Helvetica", 10
-    )
-    bill_to_y -= bill_to_line_h
-
-# Fixed horizontal line: it stays in the same place for every address.
-cursor_y = invoice_info_y - bill_to_block_h
-c.setLineWidth(0.8)
-c.line(box_x, cursor_y, box_x + box_w, cursor_y)
+    # Fixed separator: the table always starts at the same vertical position.
+    cursor_y = invoice_info_y - bill_to_block_h
+    c.setLineWidth(0.8)
+    c.line(box_x, cursor_y, box_x + box_w, cursor_y)
 
     # =====================================================
     # TABLE
