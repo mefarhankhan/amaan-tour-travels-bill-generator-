@@ -483,16 +483,18 @@ def generate_bill_pdf(data, output_dir):
     for part in address_parts:
         bill_to_lines.extend(wrap_text(c, part, "Helvetica", 10, bill_to_col_w - 6 * mm))
 
-    bill_to_y = invoice_info_y - 6 * mm
+        bill_to_y = invoice_info_y - 6 * mm
+    last_bill_to_y = bill_to_y
     for line in bill_to_lines:
         draw_center(c, line, bill_to_col_x, bill_to_y, bill_to_col_w, "Helvetica", 10)
+        last_bill_to_y = bill_to_y
         bill_to_y -= 5.5 * mm
 
     # Move on below whichever block (invoice info or Bill To) ran longer,
     # then straight into the table. (Each journey's own From/To now lives
     # in its own table column below, instead of a single line here that
     # only ever showed the first row.)
-    cursor_y = min(invoice_info_y - 6 * mm, bill_to_y) - 8 * mm
+    cursor_y = min(invoice_info_y - 6 * mm, last_bill_to_y) - 5 * mm
     c.setLineWidth(0.8)
     c.line(box_x, cursor_y, box_x + box_w, cursor_y)
 
