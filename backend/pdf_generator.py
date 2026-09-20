@@ -618,10 +618,10 @@ def generate_bill_pdf(data, output_dir):
         draw_line_centered(c, r["km"], x5, row_bottom + this_row_h / 2 - km_size * 0.35, km_w, "Helvetica", km_size)
 
         rate_size = fit_font(c, r["rate_text"], rate_w - 4 * mm, "Helvetica", 9)
-        draw_line_right(c, r["rate_text"], x6, row_bottom + this_row_h / 2 - rate_size * 0.35, rate_w, "Helvetica", rate_size)
+        draw_line_centered(c, r["rate_text"], x6, row_bottom + this_row_h / 2 - rate_size * 0.35, rate_w, "Helvetica", rate_size)
 
         amount_size = fit_font(c, r["amount_text"], amount_w - 4 * mm, "Helvetica", 9)
-        draw_line_right(c, r["amount_text"], x7, row_bottom + this_row_h / 2 - amount_size * 0.35, amount_w, "Helvetica", amount_size)
+        draw_line_centered(c, r["amount_text"], x7, row_bottom + this_row_h / 2 - amount_size * 0.35, amount_w, "Helvetica", amount_size)
 
         current_y = row_bottom
 
