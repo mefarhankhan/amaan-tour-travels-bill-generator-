@@ -94,6 +94,12 @@ function toggleGstinField() {
 document.getElementById("bill_type").addEventListener("change", toggleGstinField);
 toggleGstinField();
 
+function isMobileDevice() {
+  const ua = navigator.userAgent || "";
+  const touchMac = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1; // iPadOS
+  return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(ua) || touchMac;
+}
+
 async function previewBill() {
   if (!form.reportValidity()) {
     return;
@@ -101,6 +107,16 @@ async function previewBill() {
 
   statusEl.textContent = "Creating exact PDF preview...";
   previewBtn.disabled = true;
+
+  const mobile = isMobileDevice();
+
+  // On mobile, open the tab right now (still inside this click handler)
+  // so the browser doesn't treat it as a blocked popup once the fetch
+  // below finishes asynchronously.
+  let newTab = null;
+  if (mobile) {
+    newTab = window.open("", "_blank");
+  }
 
   try {
     const response = await fetch("/api/preview-bill", {
@@ -115,16 +131,31 @@ async function previewBill() {
     }
 
     const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
 
-    if (pdfPreview.src) {
-      URL.revokeObjectURL(pdfPreview.src);
+    if (mobile) {
+      // Most mobile browsers (iOS Safari especially) can't render a PDF
+      // inside an iframe, so hand it off to the device's own PDF viewer.
+      if (newTab) {
+        newTab.location.href = url;
+      } else {
+        window.location.href = url;
+      }
+      statusEl.textContent = "Preview opened in a new tab.";
+    } else {
+      if (pdfPreview.src) {
+        URL.revokeObjectURL(pdfPreview.src);
+      }
+
+      pdfPreview.src = url;
+      previewModal.style.display = "flex";
+      previewModal.setAttribute("aria-hidden", "false");
+      statusEl.textContent = "Preview ready. This is the actual PDF.";
     }
-
-    pdfPreview.src = URL.createObjectURL(blob);
-    previewModal.style.display = "flex";
-    previewModal.setAttribute("aria-hidden", "false");
-    statusEl.textContent = "Preview ready. This is the actual PDF.";
   } catch (error) {
+    if (newTab) {
+      newTab.close();
+    }
     statusEl.textContent = error.message;
   } finally {
     previewBtn.disabled = false;
