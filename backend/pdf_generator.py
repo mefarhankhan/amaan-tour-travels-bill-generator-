@@ -267,7 +267,6 @@ def generate_bill_pdf(data, output_dir):
     output_path = output_dir / f"{invoice_no}.pdf"
 
     items = data.get("items") or []
-    first_item = items[0] if items else {}
 
     c = canvas.Canvas(str(output_path), pagesize=A4)
     c.setTitle(f"Amaan Tour and Travels - {invoice_no}")
@@ -303,6 +302,11 @@ def generate_bill_pdf(data, output_dir):
 
     cursor_y -= 10 * mm
 
+    is_gst_bill = str(data.get("bill_type") or "").strip().lower() == "gst"
+    gstin = str(data.get("gstin") or "").strip()
+
+    address_top_y = cursor_y
+
     address_lines = [
         FIXED["address_line1"],
         FIXED["address_line2"],
@@ -314,13 +318,11 @@ def generate_bill_pdf(data, output_dir):
         draw_right_at(c, line, right_x, cursor_y, "Helvetica", 10)
         cursor_y -= 5 * mm
 
-    # GSTIN — only printed on GST bills, and only if it was supplied
-    is_gst_bill = str(data.get("bill_type") or "").strip().lower() == "gst"
-    gstin = str(data.get("gstin") or "").strip()
-
+    # GSTIN — printed on the opposite (left) side of the address block,
+    # only on GST bills and only if it was supplied.
     if is_gst_bill and gstin:
-        draw_right_at(c, f"GSTIN: {gstin}", right_x, cursor_y, "Helvetica-Bold", 10)
-        cursor_y -= 5 * mm
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(left_x, address_top_y - 5 * mm, f"GSTIN: {gstin}")
 
     # Separator under the header block
     cursor_y -= 3 * mm
@@ -340,28 +342,26 @@ def generate_bill_pdf(data, output_dir):
     bill_to_address = data.get("bill_to_address") or ""
     address_parts = [ln.strip() for ln in str(bill_to_address).splitlines() if ln.strip()]
 
+    # Give "Bill to" some breathing room from the corner instead of
+    # sitting flush against the outer border.
+    bill_to_right_x = right_x - 6 * mm
+
     c.setFont("Helvetica", 10)
     c.drawString(left_x, cursor_y, f"Invoice no:-{invoice_no_display}")
-    draw_right_at(c, "Bill to", right_x, cursor_y, "Helvetica", 10)
+    draw_right_at(c, "Bill to", bill_to_right_x, cursor_y, "Helvetica", 10)
 
     cursor_y -= 6 * mm
     c.drawString(left_x, cursor_y, f"Issue date:- {issue_date_display}")
-    draw_right_at(c, bill_to_name, right_x, cursor_y, "Helvetica", 10)
+    draw_right_at(c, bill_to_name, bill_to_right_x, cursor_y, "Helvetica", 10)
 
     for part in address_parts:
         cursor_y -= 5.5 * mm
-        draw_right_at(c, part, right_x, cursor_y, "Helvetica", 10)
+        draw_right_at(c, part, bill_to_right_x, cursor_y, "Helvetica", 10)
 
-    # Space to match the reference layout, then a route line
-    cursor_y -= 26 * mm
-    c.setLineWidth(0.8)
-    c.line(box_x, cursor_y + 5 * mm, box_x + box_w, cursor_y + 5 * mm)
-
-    route = first_item.get("route") or first_item.get("description") or ""
-    c.setFont("Helvetica", 11)
-    c.drawString(left_x, cursor_y, f"From-{route}")
-
-    cursor_y -= 3 * mm
+    # Space to match the reference layout, then straight into the table.
+    # (Each journey's own From/To now lives in its own table column below,
+    # instead of a single line here that only ever showed the first row.)
+    cursor_y -= 20 * mm
     c.setLineWidth(0.8)
     c.line(box_x, cursor_y, box_x + box_w, cursor_y)
 
@@ -373,17 +373,21 @@ def generate_bill_pdf(data, output_dir):
     table_top = cursor_y
     inner_w = box_w
 
-    date_w = 32 * mm
-    service_w = 34 * mm
-    km_w = 32 * mm
-    rate_w = 34 * mm
-    amount_w = inner_w - date_w - service_w - km_w - rate_w
+    date_w = 20 * mm
+    vehicle_w = 24 * mm
+    service_w = 20 * mm
+    route_w = 45 * mm
+    km_w = 22 * mm
+    rate_w = 25 * mm
+    amount_w = inner_w - date_w - vehicle_w - service_w - route_w - km_w - rate_w
 
     x1 = table_x
     x2 = x1 + date_w
-    x3 = x2 + service_w
-    x4 = x3 + km_w
-    x5 = x4 + rate_w
+    x3 = x2 + vehicle_w
+    x4 = x3 + service_w
+    x5 = x4 + route_w
+    x6 = x5 + km_w
+    x7 = x6 + rate_w
 
     header_h = 12 * mm
     header_bottom = table_top - header_h
@@ -391,18 +395,20 @@ def generate_bill_pdf(data, output_dir):
     c.setLineWidth(0.8)
     c.rect(table_x, header_bottom, inner_w, header_h)
 
-    for x in (x2, x3, x4, x5):
+    for x in (x2, x3, x4, x5, x6, x7):
         c.line(x, table_top, x, header_bottom)
 
     header_y = header_bottom + 4.2 * mm
 
-    draw_center(c, "Date of journey", x1, header_y, date_w, "Helvetica-Bold", 9)
-    draw_center(c, "Service", x2, header_y, service_w, "Helvetica-Bold", 9)
-    draw_center(c, "KMs Run", x3, header_y, km_w, "Helvetica-Bold", 9)
-    draw_center(c, "Rate", x4, header_y, rate_w, "Helvetica-Bold", 9)
-    draw_center(c, "Amount", x5, header_y, amount_w, "Helvetica-Bold", 9)
+    draw_center(c, "Date", x1, header_y, date_w, "Helvetica-Bold", 9)
+    draw_center(c, "Vehicle No.", x2, header_y, vehicle_w, "Helvetica-Bold", 9)
+    draw_center(c, "Service", x3, header_y, service_w, "Helvetica-Bold", 9)
+    draw_center(c, "From / To", x4, header_y, route_w, "Helvetica-Bold", 9)
+    draw_center(c, "KMs Run", x5, header_y, km_w, "Helvetica-Bold", 9)
+    draw_center(c, "Rate", x6, header_y, rate_w, "Helvetica-Bold", 9)
+    draw_center(c, "Amount", x7, header_y, amount_w, "Helvetica-Bold", 9)
 
-    row_h = 16 * mm
+    row_h = 14 * mm
     current_y = header_bottom
     total = 0
     max_rows = 6
@@ -412,12 +418,13 @@ def generate_bill_pdf(data, output_dir):
         row_bottom = current_y - row_h
 
         c.rect(table_x, row_bottom, inner_w, row_h)
-        for x in (x2, x3, x4, x5):
+        for x in (x2, x3, x4, x5, x6, x7):
             c.line(x, current_y, x, row_bottom)
 
         date_value = format_date(item.get("date") or item.get("journey_date") or "")
-        service_value = item.get("service") or "Official"
         vehicle_no = item.get("vehicle_no") or ""
+        service_value = item.get("service") or "Official"
+        route_value = item.get("route") or item.get("description") or ""
         km_value = item.get("km") or ""
         rate_value = item.get("rate")
         amount = item.get("amount", 0)
@@ -430,18 +437,15 @@ def generate_bill_pdf(data, output_dir):
         rate_text = money(rate_value) if rate_value not in (None, "", 0, "0") else ""
         amount_text = money(amount)
 
-        mid_y = row_bottom + row_h / 2
+        mid_y = row_bottom + row_h / 2 - 1.5 * mm
 
-        draw_center(c, date_value, x1, mid_y - 1.5 * mm, date_w, "Helvetica", 9)
-
-        # Service name, with vehicle number in brackets below it
-        draw_center(c, service_value, x2, mid_y + 2.5 * mm, service_w, "Helvetica", 9)
-        if vehicle_no:
-            draw_center(c, f"[{vehicle_no}]", x2, mid_y - 4 * mm, service_w, "Helvetica", 8)
-
-        draw_center(c, km_value, x3, mid_y - 1.5 * mm, km_w, "Helvetica", 9)
-        draw_right(c, rate_text, x4, mid_y - 1.5 * mm, rate_w, "Helvetica", 9)
-        draw_right(c, amount_text, x5, mid_y - 1.5 * mm, amount_w, "Helvetica", 9)
+        draw_center(c, date_value, x1, mid_y, date_w, "Helvetica", 9)
+        draw_center(c, vehicle_no, x2, mid_y, vehicle_w, "Helvetica", 9)
+        draw_center(c, service_value, x3, mid_y, service_w, "Helvetica", 9)
+        draw_center(c, route_value, x4, mid_y, route_w, "Helvetica", 9)
+        draw_center(c, km_value, x5, mid_y, km_w, "Helvetica", 9)
+        draw_right(c, rate_text, x6, mid_y, rate_w, "Helvetica", 9)
+        draw_right(c, amount_text, x7, mid_y, amount_w, "Helvetica", 9)
 
         current_y = row_bottom
 

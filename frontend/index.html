@@ -38,11 +38,6 @@
             <input type="date" name="issue_date" required>
           </label>
 
-          <label>
-            Car No.
-            <input name="car_no" placeholder="">
-          </label>
-
           <label id="gstinField" style="display:none;">
             GSTIN
             <input name="gstin" id="gstin" placeholder="">
@@ -97,8 +92,6 @@
       <iframe id="pdfPreview" title="Actual A4 PDF Preview"></iframe>
     </div>
   </div>
-    </form>
-  </main>
 
   <template id="rowTemplate">
     <div class="journey-row">
@@ -108,9 +101,9 @@
           <input class="item-date" type="date">
         </label>
 
-        <label class="wide">
-          From / To
-          <input class="item-route" placeholder="From_____To__________">
+        <label>
+          Vehicle No.
+          <input class="item-vehicle" placeholder="_______">
         </label>
 
         <label>
@@ -118,9 +111,9 @@
           <input class="item-service" placeholder="Official/Personal">
         </label>
 
-        <label>
-          Vehicle No.
-          <input class="item-vehicle" placeholder="_______">
+        <label class="wide">
+          From / To
+          <input class="item-route" placeholder="From_____To__________">
         </label>
 
         <label>

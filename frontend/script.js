@@ -70,7 +70,6 @@ function collectData() {
     bill_type: fd.get("bill_type"),
     invoice_no: fd.get("invoice_no"),
     issue_date: fd.get("issue_date"),
-    car_no: fd.get("car_no"),
     gstin: fd.get("gstin"),
     bill_to_name: fd.get("bill_to_name"),
     bill_to_address: fd.get("bill_to_address"),
@@ -194,7 +193,6 @@ addRowBtn.addEventListener("click", () => addRow());
 resetBtn.addEventListener("click", () => {
   form.reset();
   document.querySelector("[name='issue_date']").value = today();
-  document.querySelector("[name='car_no']").value = "";
   rowsContainer.innerHTML = "";
   addRow();
   statusEl.textContent = "";
