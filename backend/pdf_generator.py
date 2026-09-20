@@ -455,6 +455,7 @@ def generate_bill_pdf(data, output_dir):
     # =====================================================
 
     cursor_y -= 8 * mm
+    invoice_info_y = cursor_y
 
     invoice_no_display = data.get("invoice_no") or ""
     issue_date_display = format_date(data.get("issue_date"))
@@ -463,26 +464,35 @@ def generate_bill_pdf(data, output_dir):
     bill_to_address = data.get("bill_to_address") or ""
     address_parts = [ln.strip() for ln in str(bill_to_address).splitlines() if ln.strip()]
 
-    # Give "Bill to" some breathing room from the corner instead of
-    # sitting flush against the outer border.
-    bill_to_right_x = right_x - 6 * mm
+    # "Bill to" lives in its own centered column on the right. Its name and
+    # address are word-wrapped to fit that column instead of relying on the
+    # customer's own line breaks and shrinking one long line until it spills
+    # past the border.
+    bill_to_col_w = 75 * mm
+    bill_to_col_x = right_x - bill_to_col_w
 
     c.setFont("Helvetica", 10)
-    c.drawString(left_x, cursor_y, f"Invoice no:-{invoice_no_display}")
-    draw_right_at(c, "Bill to", bill_to_right_x, cursor_y, "Helvetica", 10)
+    c.drawString(left_x, invoice_info_y, f"Invoice no:-{invoice_no_display}")
+    draw_center(c, "Bill to", bill_to_col_x, invoice_info_y, bill_to_col_w, "Helvetica", 10)
 
-    cursor_y -= 6 * mm
-    c.drawString(left_x, cursor_y, f"Issue date:- {issue_date_display}")
-    draw_right_at(c, bill_to_name, right_x, cursor_y, "Helvetica", 10)
+    c.drawString(left_x, invoice_info_y - 6 * mm, f"Issue date:- {issue_date_display}")
 
+    bill_to_lines = []
+    if bill_to_name:
+        bill_to_lines.extend(wrap_text(c, bill_to_name, "Helvetica", 10, bill_to_col_w - 6 * mm))
     for part in address_parts:
-        cursor_y -= 5.5 * mm
-        draw_right_at(c, part, right_x, cursor_y, "Helvetica", 10)
+        bill_to_lines.extend(wrap_text(c, part, "Helvetica", 10, bill_to_col_w - 6 * mm))
 
-    # Space to match the reference layout, then straight into the table.
-    # (Each journey's own From/To now lives in its own table column below,
-    # instead of a single line here that only ever showed the first row.)
-    cursor_y -= 20 * mm
+    bill_to_y = invoice_info_y - 6 * mm
+    for line in bill_to_lines:
+        draw_center(c, line, bill_to_col_x, bill_to_y, bill_to_col_w, "Helvetica", 10)
+        bill_to_y -= 5.5 * mm
+
+    # Move on below whichever block (invoice info or Bill To) ran longer,
+    # then straight into the table. (Each journey's own From/To now lives
+    # in its own table column below, instead of a single line here that
+    # only ever showed the first row.)
+    cursor_y = min(invoice_info_y - 6 * mm, bill_to_y) - 8 * mm
     c.setLineWidth(0.8)
     c.line(box_x, cursor_y, box_x + box_w, cursor_y)
 
@@ -618,7 +628,7 @@ def generate_bill_pdf(data, output_dir):
         draw_line_centered(c, r["km"], x5, row_bottom + this_row_h / 2 - km_size * 0.35, km_w, "Helvetica", km_size)
 
         rate_size = fit_font(c, r["rate_text"], rate_w - 4 * mm, "Helvetica", 9)
-        draw_line_right(c, r["rate_text"], x6, row_bottom + this_row_h / 2 - rate_size * 0.35, rate_w, "Helvetica", rate_size)
+        draw_line_centered(c, r["rate_text"], x6, row_bottom + this_row_h / 2 - rate_size * 0.35, rate_w, "Helvetica", rate_size)
 
         amount_size = fit_font(c, r["amount_text"], amount_w - 4 * mm, "Helvetica", 9)
         draw_line_right(c, r["amount_text"], x7, row_bottom + this_row_h / 2 - amount_size * 0.35, amount_w, "Helvetica", amount_size)
