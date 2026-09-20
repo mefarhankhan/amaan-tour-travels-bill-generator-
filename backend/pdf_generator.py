@@ -468,35 +468,57 @@ def generate_bill_pdf(data, output_dir):
     # address are word-wrapped to fit that column instead of relying on the
     # customer's own line breaks and shrinking one long line until it spills
     # past the border.
-    bill_to_col_w = 75 * mm
-    bill_to_col_x = right_x - bill_to_col_w
+   # Fixed-size Bill To section: long addresses cannot move the table down.
+bill_to_col_w = 75 * mm
+bill_to_col_x = right_x - bill_to_col_w
 
-    c.setFont("Helvetica", 10)
-    c.drawString(left_x, invoice_info_y, f"Invoice no:-{invoice_no_display}")
-    draw_center(c, "Bill to", bill_to_col_x, invoice_info_y, bill_to_col_w, "Helvetica", 10)
+# Keeps the customer text away from the outer black border.
+bill_to_text_x = bill_to_col_x + 6 * mm
+bill_to_text_w = bill_to_col_w - 12 * mm
 
-    c.drawString(left_x, invoice_info_y - 6 * mm, f"Issue date:- {issue_date_display}")
+bill_to_block_h = 45 * mm
+bill_to_line_h = 5.5 * mm
+max_bill_to_lines = 6
 
-    bill_to_lines = []
-    if bill_to_name:
-        bill_to_lines.extend(wrap_text(c, bill_to_name, "Helvetica", 10, bill_to_col_w - 6 * mm))
-    for part in address_parts:
-        bill_to_lines.extend(wrap_text(c, part, "Helvetica", 10, bill_to_col_w - 6 * mm))
+c.setFont("Helvetica", 10)
+c.drawString(left_x, invoice_info_y, f"Invoice no:-{invoice_no_display}")
+draw_center(
+    c, "Bill to", bill_to_text_x, invoice_info_y,
+    bill_to_text_w, "Helvetica", 10
+)
 
-        bill_to_y = invoice_info_y - 6 * mm
-    last_bill_to_y = bill_to_y
-    for line in bill_to_lines:
-        draw_center(c, line, bill_to_col_x, bill_to_y, bill_to_col_w, "Helvetica", 10)
-        last_bill_to_y = bill_to_y
-        bill_to_y -= 5.5 * mm
+c.drawString(left_x, invoice_info_y - 6 * mm, f"Issue date:- {issue_date_display}")
 
-    # Move on below whichever block (invoice info or Bill To) ran longer,
-    # then straight into the table. (Each journey's own From/To now lives
-    # in its own table column below, instead of a single line here that
-    # only ever showed the first row.)
-    cursor_y = min(invoice_info_y - 6 * mm, last_bill_to_y) - 5 * mm
-    c.setLineWidth(0.8)
-    c.line(box_x, cursor_y, box_x + box_w, cursor_y)
+bill_to_lines = []
+
+if bill_to_name:
+    bill_to_lines.extend(
+        wrap_text(c, bill_to_name, "Helvetica", 10, bill_to_text_w)
+    )
+
+for part in address_parts:
+    bill_to_lines.extend(
+        wrap_text(c, part, "Helvetica", 10, bill_to_text_w)
+    )
+
+# Do not let a long address change the header/table position.
+if len(bill_to_lines) > max_bill_to_lines:
+    bill_to_lines = bill_to_lines[:max_bill_to_lines]
+    bill_to_lines[-1] = "..."
+
+bill_to_y = invoice_info_y - 6 * mm
+
+for line in bill_to_lines:
+    draw_center(
+        c, line, bill_to_text_x, bill_to_y,
+        bill_to_text_w, "Helvetica", 10
+    )
+    bill_to_y -= bill_to_line_h
+
+# Fixed horizontal line: it stays in the same place for every address.
+cursor_y = invoice_info_y - bill_to_block_h
+c.setLineWidth(0.8)
+c.line(box_x, cursor_y, box_x + box_w, cursor_y)
 
     # =====================================================
     # TABLE
